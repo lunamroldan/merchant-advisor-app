@@ -1,102 +1,52 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from datetime import datetime
 
 # Configuración de página
 st.set_page_config(page_title="Merchant Advisor Hub", layout="wide")
 
-# --- 1. CARGA DE DATOS SSOT ---
+# --- 1. DATOS DE CARTERA (Simulando la base asignada al asesor) ---
 def load_ssot_data():
-    # Datos con tipos específicos: CUIT y NroComercio como INT
     data = {
-        "CUIT": [30712345678, 20987654321, 33444555667],
-        "NroComercio": [123456789, 987654321, 456123789],
-        "Nombre": ["Tienda Alpha", "Bazar Beta", "Moda Gamma"],
-        "Ventas_Mes": [15000, 8000, 12000],
-        "Estado": ["🟢 Estable", "🔴 En Riesgo", "🟡 Potencial"]
+        "CUIT": [30712345678, 20987654321, 33444555667, 30555666778],
+        "NroComercio": [123456789, 987654321, 456123789, 789456123],
+        "Nombre": ["Tienda Alpha", "Bazar Beta", "Moda Gamma", "Tech Solutions"],
+        "Ventas_Mes": [15000, 8000, 12000, 45000],
+        "Ventas_Prev": [14000, 9500, 12500, 40000],
+        "Estado": ["🟢 Estable", "🔴 En Riesgo", "🟡 Potencial", "🟢 Estable"]
     }
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    # Cálculo de performance
+    df['Variacion'] = ((df['Ventas_Mes'] - df['Ventas_Prev']) / df['Ventas_Prev']) * 100
+    return df
 
-# --- 2. PANEL LATERAL (SIDEBAR) ---
-st.sidebar.header("👤 Identificación")
-nombre_asesor = st.sidebar.text_input("Nombre del Asesor/a:", placeholder="Ej: Juan Pérez")
+# --- 2. PANEL LATERAL (LOGIN Y NAVEGACIÓN) ---
+st.sidebar.header("👤 Sesión de Asesor")
+nombre_asesor = st.sidebar.text_input("Nombre y Apellido:", placeholder="Ej: Ana García")
 
-st.sidebar.divider()
-
-st.sidebar.header("🔍 Selección de Merchant")
-df = load_ssot_data()
-
-# Creamos la etiqueta de visualización combinando los datos
-df['Display_Name'] = (
-    df['Nombre'] + 
-    " | CUIT: " + df['CUIT'].astype(str) + 
-    " | Nro: " + df['NroComercio'].astype(str)
-)
-
-merchant_selec_label = st.sidebar.selectbox(
-    "Selecciona un Merchant para gestionar:",
-    options=df['Display_Name'].values
-)
-
-# Extraer la fila de datos correspondiente a la selección
-row = df[df['Display_Name'] == merchant_selec_label].iloc[0]
-
-# --- 3. INTERFAZ PRINCIPAL ---
-st.title("🚀 Merchant Advisor Hub")
-
-# Validación de nombre de asesor
 if not nombre_asesor:
-    st.warning("👈 Por favor, ingresa tu nombre en el panel lateral para habilitar la gestión.")
+    st.sidebar.warning("⚠️ Ingresa tu nombre para acceder.")
+    st.title("🚀 Bienvenido al Merchant Advisor Hub")
+    st.info("Por favor, identifícate en el panel lateral para visualizar tu cartera.")
     st.stop()
 
-# CABECERA (Aquí estaba el error de la llave)
-st.markdown(f"### Gestionando: **{row['Nombre']}**")
-st.caption(f"CUIT: {row['CUIT']} | Nro Comercio: {row['NroComercio']} | **Asesor/a a cargo: {nombre_asesor}**")
+st.sidebar.divider()
+# Navegación
+seccion = st.sidebar.radio("Ir a:", ["🏠 Home / Dashboard", "📝 Gestión Individual"])
 
-# MÉTRICAS
-c1, c2, c3 = st.columns(3)
-c1.metric("Ventas Actuales", f"${row['Ventas_Mes']:,}")
-c2.metric("Estado de Salud", row['Estado'])
-c3.metric("CUIT ID", row['CUIT'])
+# Carga de datos
+df = load_ssot_data()
 
-st.divider()
-
-# --- 4. FORMULARIO DE REGISTRO ---
-st.subheader("📝 Cuaderno de Registro")
-
-with st.form("registro_contacto", clear_on_submit=True):
-    col_a, col_b = st.columns(2)
+# --- 3. SECCIÓN: HOME / DASHBOARD ---
+if seccion == "🏠 Home / Dashboard":
+    st.title(f"📊 Dashboard de Cartera: {nombre_asesor}")
     
-    with col_a:
-        fecha = st.date_input("Fecha de contacto", datetime.now())
-        tipo = st.selectbox("Canal", ["Llamada", "Email", "WhatsApp", "Visita"])
+    # KPIs Globales de la cartera
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Merchants a cargo", len(df))
+    c2.metric("Ventas Totales", f"${df['Ventas_Mes'].sum():,}")
     
-    with col_b:
-        compromiso = st.text_input("Compromiso / Próximo paso")
-        prioridad = st.select_slider("Prioridad de la acción", options=["Baja", "Media", "Alta"])
-    
-    resumen = st.text_area("Insights y Resumen de la conversación")
-    
-    submit = st.form_submit_button("Guardar Gestión")
-    
-    if submit:
-        # Estructura de datos lista para escalar a base de datos
-        nueva_gestion = {
-            "Fecha": fecha.strftime("%Y-%m-%d"),
-            "Asesor": nombre_asesor,
-            "Merchant": row['Nombre'],
-            "CUIT": int(row['CUIT']),
-            "NroComercio": int(row['NroComercio']),
-            "Canal": tipo,
-            "Resumen": resumen,
-            "Compromiso": compromiso,
-            "Prioridad": prioridad
-        }
-        
-        st.success(f"✅ Gestión guardada exitosamente por {nombre_asesor}")
-        # Muestra lo que se guardaría (útil para debug)
-        with st.expander("Ver datos registrados"):
-            st.write(nueva_gestion)
-
-# --- 5. SUGERENCIA DE AI ---
-st.info(f"💡 **Tip para {nombre_asesor}:** El merchant {row['Nombre']} prefiere contacto vía {tipo} según tendencias históricas.")
+    # Salud promedio
+    riesgo_count = len(df[df['Estado'] == "🔴 En Riesgo"])
+    c3.metric("Comercios en Riesgo",
