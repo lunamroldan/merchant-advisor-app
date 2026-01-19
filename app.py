@@ -49,4 +49,61 @@ if seccion == "🏠 Home / Dashboard":
     
     # Salud promedio
     riesgo_count = len(df[df['Estado'] == "🔴 En Riesgo"])
-    c3.metric("Comercios en Riesgo",
+    c3.metric("Comercios en Riesgo", riesgo_count, delta=riesgo_count, delta_color="inverse")
+    
+    avg_perf = df['Variacion'].mean()
+    c4.metric("Performance Promedio", f"{avg_perf:.1f}%")
+
+    st.divider()
+
+    col_chart1, col_chart2 = st.columns(2)
+
+    with col_chart1:
+        st.subheader("Ventas por Merchant")
+        fig_ventas = px.bar(df, x='Nombre', y='Ventas_Mes', color='Estado', 
+                           text_auto='.2s', color_discrete_map={"🟢 Estable": "#28a745", "🔴 En Riesgo": "#dc3545", "🟡 Potencial": "#ffc107"})
+        st.plotly_chart(fig_ventas, use_container_width=True)
+
+    with col_chart2:
+        st.subheader("Estado de Salud de Cartera")
+        fig_pie = px.pie(df, names='Estado', hole=0.4, 
+                         color='Estado', color_discrete_map={"🟢 Estable": "#28a745", "🔴 En Riesgo": "#dc3545", "🟡 Potencial": "#ffc107"})
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    st.subheader("📑 Vista Rápida de Cartera")
+    st.dataframe(df[['Nombre', 'CUIT', 'Ventas_Mes', 'Variacion', 'Estado']], use_container_width=True, hide_index=True)
+
+# --- 4. SECCIÓN: GESTIÓN INDIVIDUAL ---
+elif seccion == "📝 Gestión Individual":
+    st.title("📋 Gestión de Merchant")
+    
+    # Selector de Merchant
+    df['Display_Name'] = df['Nombre'] + " | CUIT: " + df['CUIT'].astype(str)
+    merchant_label = st.selectbox("Selecciona un Merchant:", options=df['Display_Name'].values)
+    
+    row = df[df['Display_Name'] == merchant_label].iloc[0]
+    
+    # Info técnica
+    st.markdown(f"### {row['Nombre']}")
+    st.caption(f"CUIT: {row['CUIT']} | Nro Comercio: {row['NroComercio']}")
+
+    # Formulario de registro (Idéntico al anterior)
+    st.divider()
+    with st.form("registro_contacto", clear_on_submit=True):
+        col_a, col_b = st.columns(2)
+        with col_a:
+            fecha = st.date_input("Fecha", datetime.now())
+            tipo = st.selectbox("Canal", ["Llamada", "Email", "WhatsApp", "Visita"])
+        with col_b:
+            compromiso = st.text_input("Próximo paso")
+            prioridad = st.select_slider("Urgencia", options=["Baja", "Media", "Alta"])
+        
+        resumen = st.text_area("Notas e Insights")
+        submit = st.form_submit_button("Guardar Gestión")
+        
+        if submit:
+            st.success(f"Gestión para {row['Nombre']} guardada por {nombre_asesor}")
+
+    # Sugerencia IA Proactiva
+    if row['Variacion'] < 0:
+        st.error(f"⚠️ **Alerta:** {row['Nombre']} bajó sus ventas un {abs(row['Variacion']):.1f}%. Necesita contacto urgente.")
