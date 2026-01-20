@@ -4,7 +4,7 @@ import plotly.express as px
 from datetime import datetime
 
 # CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="Merchant Advisor Hub", layout="wide")
+st.set_page_config(page_title="GESTION ESTRATEGICA DE CARTERA", layout="wide")
 
 # --- 1. PERSISTENCIA DE DATOS (Trazabilidad) ---
 if 'historial_db' not in st.session_state:
@@ -20,19 +20,19 @@ def load_data():
         "Nombre": ["Tienda Alpha", "Bazar Beta", "Moda Gamma"],
         "Ventas_Mes": [15000, 8000, 12000],
         "Ventas_Prev": [14000, 9500, 12500],
-        "Estado": ["🟢 Estable", "🔴 En Riesgo", "🟡 Potencial"]
+        "Estado": ["🟢 MAM ", "🔴 INACTIVO ", "🟡 CHURN "]
     }
     df = pd.DataFrame(data)
     df['Variacion'] = ((df['Ventas_Mes'] - df['Ventas_Prev']) / df['Ventas_Prev']) * 100
     return df
 
 # --- 3. SIDEBAR (SESIÓN Y NAVEGACIÓN) ---
-st.sidebar.header("👤 Sesión de Asesor")
+st.sidebar.header("👤 KAM ")
 nombre_asesor = st.sidebar.text_input("Nombre del Asesor/a:", placeholder="Ej: Ana García")
 
 if not nombre_asesor:
     st.sidebar.warning("⚠️ Ingresa tu nombre para continuar.")
-    st.title("🚀 Merchant Advisor Hub")
+    st.title("🚀GESTION ESTRATEGICA DE CARTERA ")
     st.info("Por favor, identifícate en el panel lateral para acceder.")
     st.stop()
 
@@ -47,7 +47,7 @@ if menu == "🏠 Home / Dashboard":
     
     c1, c2, c3 = st.columns(3)
     c1.metric("Merchants a cargo", len(df_maestro))
-    c2.metric("Ventas Totales", f"${df_maestro['Ventas_Mes'].sum():,}")
+    c2.metric("TPV", f"${df_maestro['Ventas_Mes'].sum():,}")
     c3.metric("Total Gestiones", len(st.session_state.historial_db))
 
     st.divider()
